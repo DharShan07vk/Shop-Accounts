@@ -316,11 +316,11 @@ export default function DashboardScreen() {
                 </View>
                 <Text style={styles.actionLabel}>Voice</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
+              <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/lists' as any)}>
                 <View style={[styles.actionIcon, { backgroundColor: '#FEF2F2' }]}>
-                  <Ionicons name="calculator" size={24} color="#EF4444" />
+                  <Ionicons name="list" size={24} color="#EF4444" />
                 </View>
-                <Text style={styles.actionLabel}>Calculator</Text>
+                <Text style={styles.actionLabel}>Lists</Text>
               </TouchableOpacity>
             </View>
 
