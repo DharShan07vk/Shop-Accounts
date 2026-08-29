@@ -22,3 +22,6 @@ export type { ContainerProps, ContainerPadding, SafeAreaEdges } from './Containe
 
 export { Avatar } from './Avatar';
 export type { AvatarProps, AvatarSize } from './Avatar';
+
+export { Header } from './Header';
+export type { HeaderProps } from './Header';
