@@ -32,26 +32,63 @@ export default function HistoryScreen() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const loadItems = async () => {
+    try {
+      const res = await axios.get(`${API}/items`);
+      setItems(res.data ?? []);
+    } catch (err) {
+      console.error('History items load error:', err);
+    }
+  };
+
+  const loadTransactions = async (pageNum = 1, isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else if (pageNum === 1) setIsLoading(true);
+    else setIsLoadingMore(true);
+
+    try {
+      const res = await axios.get(`${API}/transactions?page=${pageNum}&limit=50`);
+      const newData = res.data.data ?? [];
+      
+      if (pageNum === 1) {
+        setTransactions(newData);
+      } else {
+        setTransactions(prev => [...prev, ...newData]);
+      }
+      setHasMore(res.data.hasMore);
+      setPage(pageNum);
+    } catch (err) {
+      console.error('History txns load error:', err);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+      setIsLoadingMore(false);
+    }
+  };
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setIsLoading(true);
-    try {
-      const [itemsRes, txnRes] = await Promise.all([
-        axios.get(`${API}/items`),
-        axios.get(`${API}/transactions`),
-      ]);
-      setItems(itemsRes.data ?? []);
-      setTransactions(txnRes.data ?? []);
-    } catch (err) {
-      console.error('History load error:', err);
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
+    
+    await Promise.all([
+      loadItems(),
+      loadTransactions(1, false)
+    ]);
+    
+    setIsLoading(false);
+    setRefreshing(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadMoreTransactions = () => {
+    if (!hasMore || isLoadingMore || isLoading) return;
+    loadTransactions(page + 1);
+  };
 
 
   // ─── Items Tab ────────────────────────────────────────────────────────────
@@ -263,7 +300,10 @@ export default function HistoryScreen() {
 
           {/* ── BY SHOP TAB ── */}
           {activeTab === 'byshop' && (
-            <ScrollView
+            
+            <FlatList
+              data={shopDateGroups}
+              keyExtractor={(item) => item.shopName}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + spacing.lg }]}
               refreshControl={
@@ -274,8 +314,10 @@ export default function HistoryScreen() {
                   tintColor={colors.primary}
                 />
               }
-            >
-              {shopDateGroups.length === 0 ? (
+              onEndReached={loadMoreTransactions}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={isLoadingMore ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} /> : null}
+              ListEmptyComponent={
                 <View style={styles.emptyState}>
                   <Ionicons name="storefront-outline" size={64} color={colors.textTertiary} />
                   <Text style={styles.emptyTitle}>No shop data yet</Text>
@@ -283,9 +325,9 @@ export default function HistoryScreen() {
                     Add a shop name when recording purchases.
                   </Text>
                 </View>
-              ) : (
-                shopDateGroups.map((shopGroup) => (
-                  <View key={shopGroup.shopName} style={styles.shopSection}>
+              }
+              renderItem={({ item: shopGroup }) => (
+                <View key={shopGroup.shopName} style={styles.shopSection}>
                     {/* Shop Name Header */}
                     <View style={styles.shopLabelRow}>
                       <Ionicons name="storefront" size={18} color={colors.primary} />
@@ -366,9 +408,9 @@ export default function HistoryScreen() {
                       );
                     })}
                   </View>
-                ))
               )}
-            </ScrollView>
+            />
+
           )}
         </>
       )}
